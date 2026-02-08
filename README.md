@@ -40,10 +40,28 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python -m app.main
+
+# Copy the example env file and add your API keys
+cp .env.example .env
+# Edit .env with your actual API keys
+
+# Run the server
+uvicorn app.main:app --reload
 ```
 
 The API will be available at `http://localhost:8000`
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/topics` | List all math topics |
+| GET | `/api/topics/{id}/problems` | Get problems for a topic |
+| GET | `/api/problems/{id}` | Get a specific problem |
+| POST | `/api/submissions` | Submit solution for evaluation |
+| GET | `/api/submissions` | View submission history |
+| GET | `/api/submissions/{id}` | Get submission details |
+| GET | `/health` | Check API and service status |
 
 ### Frontend Setup
 
