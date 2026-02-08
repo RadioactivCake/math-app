@@ -1,0 +1,73 @@
+{
+  "topics": [
+    {
+      "id": "fractions-addition",
+      "name": "Adding Fractions",
+      "description": "Adding fractions with like and unlike denominators",
+      "grade_level": 5,
+      "problems": [
+        {
+          "id": "frac-add-001",
+          "question": "What is 1/4 + 1/2?",
+          "correct_answer": "3/4"
+        },
+        {
+          "id": "frac-add-002",
+          "question": "What is 2/3 + 3/4?",
+          "correct_answer": "17/12"
+        },
+        {
+          "id": "frac-add-003",
+          "question": "What is 3/5 + 1/4?",
+          "correct_answer": "17/20"
+        }
+      ]
+    },
+    {
+      "id": "linear-equations",
+      "name": "Solving Linear Equations",
+      "description": "Solving one-variable linear equations",
+      "grade_level": 7,
+      "problems": [
+        {
+          "id": "lin-eq-001",
+          "question": "Solve for x: 2x + 5 = 13",
+          "correct_answer": "x = 4"
+        },
+        {
+          "id": "lin-eq-002",
+          "question": "Solve for x: 3(x - 2) = 15",
+          "correct_answer": "x = 7"
+        },
+        {
+          "id": "lin-eq-003",
+          "question": "Solve for x: 4x - 7 = 2x + 9",
+          "correct_answer": "x = 8"
+        }
+      ]
+    },
+    {
+      "id": "percentages",
+      "name": "Percentage Calculations",
+      "description": "Finding percentages of numbers and percentage changes",
+      "grade_level": 6,
+      "problems": [
+        {
+          "id": "pct-001",
+          "question": "What is 25% of 80?",
+          "correct_answer": "20"
+        },
+        {
+          "id": "pct-002",
+          "question": "A shirt costs $40 and is on sale for 30% off. What is the sale price?",
+          "correct_answer": "$28"
+        },
+        {
+          "id": "pct-003",
+          "question": "If 45 is 75% of a number, what is the number?",
+          "correct_answer": "60"
+        }
+      ]
+    }
+  ]
+}
