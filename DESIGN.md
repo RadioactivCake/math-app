@@ -34,7 +34,7 @@ This document outlines the technical design for the Math Feedback Application - 
 | Frontend | Vanilla HTML/CSS/JS | Simple, no build step, fast to develop |
 | Backend | Python + FastAPI | Async support, automatic OpenAPI docs, easy API design |
 | Database | SQLite | Zero config, file-based, sufficient for this scope |
-| OCR | Mathpix API | Specialized for mathematical handwriting |
+| OCR | OCR.space API (Engine 3) | Free tier, handwriting OCR support |
 | LLM | Claude API | Strong reasoning capabilities for pedagogical feedback |
 
 ### Request Flow
@@ -325,17 +325,17 @@ Items explicitly out of scope for initial implementation, but worth noting:
 |------|------|--------|
 | 1 | Database setup and seeding | ✅ Complete |
 | 2 | Basic API endpoints (topics, problems) | ✅ Complete |
-| 3 | Mathpix integration | ✅ Complete |
+| 3 | OCR integration (OCR.space Engine 3 - Handwriting) | ✅ Complete |
 | 4 | Claude integration with evaluation prompt | ✅ Complete |
 | 5 | Submission endpoint (full flow) | ✅ Complete |
-| 6 | Frontend: topic selection and problem display | ⏳ Pending |
-| 7 | Frontend: image upload with preview | ⏳ Pending |
-| 8 | Frontend: feedback display | ⏳ Pending |
-| 9 | Frontend: submission history | ⏳ Pending |
+| 6 | Frontend: topic selection and problem display | ✅ Complete |
+| 7 | Frontend: image upload with preview | ✅ Complete |
+| 8 | Frontend: feedback display | ✅ Complete |
+| 9 | Frontend: submission history | ✅ Complete |
 | 10 | Error handling and edge cases | ✅ Complete |
 | 11 | Testing with provided images | ⏳ Pending |
 
-### Backend Files Created
+### Backend Files
 
 ```
 backend/
@@ -353,6 +353,16 @@ backend/
     │   └── submissions.py # Submissions endpoints
     └── services/
         ├── __init__.py
-        ├── mathpix.py     # Mathpix OCR integration
+        ├── ocr.py         # OCR.space integration (Engine 3 - Handwriting)
         └── evaluator.py   # Claude evaluation service
+```
+
+### Frontend Files
+
+```
+frontend/
+├── index.html             # Main HTML page (single-page app)
+└── src/
+    ├── app.js             # Application logic (API calls, UI management)
+    └── styles.css         # Responsive styling
 ```

@@ -13,7 +13,7 @@ from ..models import (
     StepAnalysis,
     ErrorResponse
 )
-from ..services.mathpix import mathpix_service
+from ..services.ocr import ocr_service
 from ..services.evaluator import evaluator_service
 
 router = APIRouter(prefix="/api/submissions", tags=["submissions"])
@@ -42,7 +42,7 @@ async def create_submission(submission: SubmissionCreate):
         raise HTTPException(status_code=404, detail="Problem not found")
 
     # Extract math from image using Mathpix
-    ocr_result = await mathpix_service.extract_math(submission.image_data)
+    ocr_result = await ocr_service.extract_math(submission.image_data)
 
     if not ocr_result.success:
         # Store failed submission

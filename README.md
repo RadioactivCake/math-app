@@ -14,7 +14,7 @@ A web application where students photograph their handwritten math solutions and
 - **Backend**: Python + FastAPI
 - **Frontend**: HTML/CSS/JavaScript
 - **Database**: SQLite
-- **APIs**: Mathpix (OCR), Claude (Evaluation)
+- **APIs**: OCR.space (Handwriting OCR), Claude (Evaluation)
 
 ## Setup Instructions
 
@@ -28,8 +28,7 @@ A web application where students photograph their handwritten math solutions and
 Create a `.env` file in the `backend/` directory:
 
 ```env
-MATHPIX_APP_ID=your_mathpix_app_id
-MATHPIX_APP_KEY=your_mathpix_app_key
+OCR_SPACE_API_KEY=your_ocr_space_api_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
@@ -90,7 +89,7 @@ Once the backend is running, visit `http://localhost:8000/docs` for interactive 
 │   │   ├── models.py      # Database models
 │   │   ├── database.py    # Database connection
 │   │   ├── routers/       # API route handlers
-│   │   └── services/      # Mathpix, Claude integrations
+│   │   └── services/      # OCR.space, Claude integrations
 │   └── requirements.txt
 └── frontend/
     ├── index.html

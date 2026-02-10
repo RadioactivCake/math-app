@@ -133,3 +133,150 @@ uvicorn app.main:app --reload
 ```
 
 **Project Location:** `C:\Users\poket\Desktop\math-feedback-app`
+
+---
+
+# Conversation Log - 2026-02-10
+
+## Request 6
+
+**User:**
+> review this folder "C:\Users\poket\Desktop\math-feedback-app" understand the objective and proceed from where we stopped
+
+**Claude:**
+Explored the full codebase. Identified that Phase 1 and Phase 2 are complete (3 commits), and Phase 3 (Frontend) is the next step. Summarized the project state and began planning the frontend build.
+
+User stopped Claude before writing code to ask important questions.
+
+---
+
+## Request 7
+
+**User:**
+> before you start working i have a few questions: did you plan to document in the readme, design and log conversation? did you remember to commit changes to the repo? do you have full understanding of what we have and what we need?
+
+**Claude:**
+Admitted that:
+1. Had NOT planned to update README.md, DESIGN.md, or CONVERSATION_LOG.md
+2. Had NOT planned to commit changes to git
+3. Needed to read the design docs and conversation log for full context
+
+Re-read all documentation files and confirmed the established workflow: update docs + commit after each phase.
+
+---
+
+## Request 8
+
+**User:**
+> you may continue
+
+**Claude:**
+Began creating index.html but user interrupted again.
+
+---
+
+## Request 9
+
+**User:**
+> wait before that, do you remember i still didn't give you the mathpix and claude api keys?
+
+**Claude:**
+Acknowledged the API keys were never provided. Asked user to share their Mathpix and Anthropic API keys to set up `backend/.env`.
+
+---
+
+## Request 10
+
+**User:**
+> it seems like mathpix's api costs money, is there a free alternative?
+
+**Claude:**
+Researched free alternatives to Mathpix. Presented options:
+1. **Pix2Text** - Open-source Python library, free, but heavy install (~1GB+ models)
+2. **Claude Vision** - Use Claude's native image reading to both extract math AND evaluate in one call. Simplest approach, only 1 API key needed.
+
+Recommended Claude Vision as the best approach for this project.
+
+---
+
+## Request 11
+
+**User:**
+> what about using ocr.space?
+
+**Claude:**
+Researched ocr.space. Found that the free tier does NOT support handwriting recognition or math notation (those are paid features, $999+/month for custom math OCR). Ruled it out for this project.
+
+Reiterated recommendation for Claude Vision.
+
+---
+
+## Request 12
+
+**User:**
+> what about creating a custom ocr for the task? also do you remember to document the conversation?
+
+**Claude:**
+Explained that building a custom OCR would require training an ML model with labeled handwritten math data - a massive scope expansion. Recommended against it unless OCR is itself a learning goal.
+
+Acknowledged the conversation log hadn't been updated yet. Updated CONVERSATION_LOG.md with the full current session.
+
+---
+
+## Request 13
+
+**User:**
+> lets try this approach for now (Claude Vision)
+
+**Claude:**
+Began refactoring backend to replace Mathpix with Claude Vision, but user interrupted with a change of plan.
+
+---
+
+## Request 14
+
+**User:**
+> we had a change, we will try to use ocr.space api, the required keys are in this file "C:\Users\poket\Desktop\key.txt"
+
+**Claude:**
+Read the API keys file. Researched OCR.space API documentation. Found that **Engine 3** supports handwriting OCR. Proceeded with full implementation:
+
+### Backend Refactor (OCR.space replaces Mathpix)
+- Created `backend/app/services/ocr.py` - OCR.space integration using Engine 3 (Handwriting)
+- Updated `backend/app/routers/submissions.py` - imports from `ocr.py` instead of `mathpix.py`
+- Updated `backend/app/main.py` - health check references `ocr_service`
+- Updated `backend/.env.example` - replaced Mathpix keys with `OCR_SPACE_API_KEY`
+- Created `backend/.env` with actual API keys (OCR.space + Anthropic)
+- `requirements.txt` unchanged (still uses `httpx` for OCR.space HTTP calls)
+
+### Frontend Built (Phase 3)
+- Created `frontend/index.html` - single-page app with 5 views (topics, problems, upload, history, detail)
+- Created `frontend/src/styles.css` - responsive, student-friendly design with cards, drag-and-drop zone, color-coded feedback
+- Created `frontend/src/app.js` - full application logic:
+  - Topic selection and problem browsing
+  - Image upload via drag-and-drop or file picker
+  - Base64 encoding and submission to API
+  - Feedback display (summary, step analysis, suggestions, encouragement)
+  - Submission history with pagination
+  - Submission detail view
+
+### Documentation Updated
+- Updated `DESIGN.md` - implementation status, tech choices, file listings
+- Updated `README.md` - API keys, tech stack, project structure
+- Updated `CONVERSATION_LOG.md` - full session log
+
+---
+
+## Current Status
+
+**Phase 1: Complete ✅**
+**Phase 2: Complete ✅** (backend with OCR.space + Claude)
+**Phase 3: Complete ✅** (frontend built)
+
+**Next: Phase 4 (Integration & Testing)**
+- Set up Python virtual environment and install dependencies
+- Start backend server
+- Serve frontend and test full flow
+- Test with sample handwritten math images
+
+**Project Location:** `C:\Users\poket\Desktop\math-feedback-app`

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Math Feedback</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>Math Feedback</h1>
+      <p class="subtitle">Upload your work, get instant feedback on your reasoning</p>
+      <nav>
+        <button id="nav-home" class="nav-btn active" onclick="showView('topics')">Topics</button>
+        <button id="nav-history" class="nav-btn" onclick="showView('history')">History</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- View 1: Topic Selection -->
+    <section id="view-topics" class="view active">
+      <h2>Choose a Topic</h2>
+      <div id="topics-grid" class="topics-grid"></div>
+    </section>
+
+    <!-- View 2: Problem Selection -->
+    <section id="view-problems" class="view">
+      <button class="back-btn" onclick="showView('topics')">&larr; Back to Topics</button>
+      <div id="topic-header" class="topic-header"></div>
+      <div id="problems-list" class="problems-list"></div>
+    </section>
+
+    <!-- View 3: Upload & Submit -->
+    <section id="view-upload" class="view">
+      <button class="back-btn" onclick="goBackToProblems()">&larr; Back to Problems</button>
+      <div id="problem-display" class="problem-display"></div>
+
+      <div id="upload-area" class="upload-area">
+        <div id="drop-zone" class="drop-zone">
+          <div class="drop-zone-content">
+            <svg class="upload-icon" viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p>Drag & drop your photo here</p>
+            <p class="drop-zone-hint">or click to select a file</p>
+          </div>
+          <input type="file" id="file-input" accept="image/*" hidden>
+        </div>
+
+        <div id="image-preview" class="image-preview hidden">
+          <img id="preview-img" src="" alt="Your work">
+          <button class="remove-btn" onclick="removeImage()">Remove</button>
+        </div>
+
+        <button id="submit-btn" class="submit-btn" disabled onclick="submitSolution()">
+          Submit for Feedback
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p>Analyzing your work...</p>
+        <p class="loading-hint">Extracting math and evaluating your reasoning</p>
+      </div>
+
+      <!-- Feedback Display -->
+      <div id="feedback-section" class="feedback-section hidden"></div>
+    </section>
+
+    <!-- View 4: Submission History -->
+    <section id="view-history" class="view">
+      <h2>Your Submission History</h2>
+      <div id="history-empty" class="empty-state hidden">
+        <p>No submissions yet. Go solve some problems!</p>
+      </div>
+      <div id="history-list" class="history-list"></div>
+      <div id="history-pagination" class="pagination"></div>
+    </section>
+
+    <!-- View 5: Submission Detail -->
+    <section id="view-detail" class="view">
+      <button class="back-btn" onclick="showView('history')">&larr; Back to History</button>
+      <div id="detail-content" class="detail-content"></div>
+    </section>
+  </main>
+
+  <script src="src/app.js"></script>
+</body>
+</html>
