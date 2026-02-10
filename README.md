@@ -14,21 +14,20 @@ A web application where students photograph their handwritten math solutions and
 - **Backend**: Python + FastAPI
 - **Frontend**: HTML/CSS/JavaScript
 - **Database**: SQLite
-- **APIs**: OCR.space (Handwriting OCR), Claude (Evaluation)
+- **APIs**: Claude Vision (Handwriting OCR + Evaluation)
 
 ## Setup Instructions
 
 ### Prerequisites
 
 - Python 3.10+
-- Node.js (optional, for frontend dev server)
+- Anthropic API key with credits (https://console.anthropic.com/)
 
 ### Environment Variables
 
 Create a `.env` file in the `backend/` directory:
 
 ```env
-OCR_SPACE_API_KEY=your_ocr_space_api_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
@@ -36,15 +35,13 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Copy the example env file and add your API keys
+# Copy the example env file and add your API key
 cp .env.example .env
-# Edit .env with your actual API keys
+# Edit .env with your Anthropic API key
 
-# Run the server
+# Run the server (on Windows use: py -m uvicorn app.main:app --reload)
 uvicorn app.main:app --reload
 ```
 
@@ -89,7 +86,7 @@ Once the backend is running, visit `http://localhost:8000/docs` for interactive 
 │   │   ├── models.py      # Database models
 │   │   ├── database.py    # Database connection
 │   │   ├── routers/       # API route handlers
-│   │   └── services/      # OCR.space, Claude integrations
+│   │   └── services/      # Claude Vision OCR, Claude evaluation
 │   └── requirements.txt
 └── frontend/
     ├── index.html

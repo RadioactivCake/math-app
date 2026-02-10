@@ -1,15 +1,16 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+
+# Load environment variables BEFORE importing services
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(env_path)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import init_db, seed_db, DATABASE_PATH
 from .routers import topics, problems, submissions
-
-# Load environment variables
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
 
 # Create FastAPI app
 app = FastAPI(

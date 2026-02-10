@@ -1,12 +1,12 @@
-import httpx
 import os
+import anthropic
 from dataclasses import dataclass
 from typing import Optional
 
 
 @dataclass
 class OCRResult:
-    """Result from OCR.space API."""
+    """Result from Claude Vision OCR."""
     success: bool
     text: Optional[str] = None
     latex: Optional[str] = None
@@ -15,20 +15,33 @@ class OCRResult:
 
 
 class OCRService:
-    """Service for extracting math from images using OCR.space API (Engine 3 - Handwriting)."""
+    """Service for extracting math from images using Claude Vision."""
 
-    API_URL = "https://api.ocr.space/parse/image"
+    EXTRACTION_PROMPT = """Look at this image of handwritten math work. Extract ALL the mathematical content you can see.
+
+Return ONLY the mathematical work as plain text, preserving the student's steps line by line.
+
+If the image is blurry, unclear, or contains no mathematical content, respond with exactly: NONE"""
 
     def __init__(self):
-        self.api_key = os.getenv("OCR_SPACE_API_KEY")
+        self.api_key = os.getenv("ANTHROPIC_API_KEY")
 
     def is_configured(self) -> bool:
-        """Check if OCR.space API key is configured."""
+        """Check if Anthropic API key is configured."""
         return bool(self.api_key)
+
+    def _parse_image_data(self, image_base64: str) -> tuple[str, str]:
+        """Parse base64 image data and return (media_type, raw_base64)."""
+        if image_base64.startswith("data:"):
+            header, data = image_base64.split(",", 1)
+            media_type = header.split(":")[1].split(";")[0]
+            return media_type, data
+        else:
+            return "image/jpeg", image_base64
 
     async def extract_math(self, image_base64: str) -> OCRResult:
         """
-        Extract mathematical content from a base64-encoded image.
+        Extract mathematical content from a base64-encoded image using Claude Vision.
 
         Args:
             image_base64: Base64-encoded image string (with or without data URI prefix)
@@ -39,85 +52,68 @@ class OCRService:
         if not self.is_configured():
             return OCRResult(
                 success=False,
-                error="OCR.space API key not configured"
+                error="Anthropic API key not configured"
             )
-
-        # Ensure proper data URI format for ocr.space
-        if not image_base64.startswith("data:"):
-            image_base64 = f"data:image/jpeg;base64,{image_base64}"
-
-        payload = {
-            "apikey": self.api_key,
-            "base64Image": image_base64,
-            "OCREngine": "3",
-            "scale": "true",
-            "isTable": "true",
-        }
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    self.API_URL,
-                    data=payload,
-                )
+            media_type, raw_base64 = self._parse_image_data(image_base64)
+            print(f"[OCR] Using Claude Vision, media_type={media_type}, data_length={len(raw_base64)}")
 
-                if response.status_code != 200:
-                    return OCRResult(
-                        success=False,
-                        error=f"OCR.space API error: HTTP {response.status_code}"
-                    )
+            client = anthropic.Anthropic(api_key=self.api_key)
 
-                data = response.json()
-
-                # Check for processing errors
-                if data.get("IsErroredOnProcessing", False):
-                    error_msg = "OCR processing failed"
-                    if data.get("ParsedResults"):
-                        error_msg = data["ParsedResults"][0].get("ErrorMessage", error_msg)
-                    return OCRResult(
-                        success=False,
-                        error=error_msg
-                    )
-
-                exit_code = data.get("OCRExitCode", 0)
-                if exit_code not in (1, 2):
-                    return OCRResult(
-                        success=False,
-                        error=f"OCR failed with exit code {exit_code}"
-                    )
-
-                # Extract text from parsed results
-                parsed_results = data.get("ParsedResults", [])
-                if not parsed_results:
-                    return OCRResult(
-                        success=False,
-                        error="No results returned from OCR"
-                    )
-
-                text = parsed_results[0].get("ParsedText", "").strip()
-
-                if not text:
-                    return OCRResult(
-                        success=False,
-                        error="No mathematical content detected in image"
-                    )
-
-                return OCRResult(
-                    success=True,
-                    text=text,
-                )
-
-        except httpx.TimeoutException:
-            return OCRResult(
-                success=False,
-                error="OCR request timed out"
+            message = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=1024,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": raw_base64,
+                            },
+                        },
+                        {
+                            "type": "text",
+                            "text": self.EXTRACTION_PROMPT,
+                        }
+                    ],
+                }]
             )
-        except httpx.RequestError as e:
+
+            text = message.content[0].text.strip()
+            print(f"[OCR] Claude response: {text[:200]}")
+
+            if not text or text.upper() == "NONE":
+                return OCRResult(
+                    success=False,
+                    error="No mathematical content detected in image"
+                )
+
+            return OCRResult(
+                success=True,
+                text=text,
+            )
+
+        except anthropic.AuthenticationError:
             return OCRResult(
                 success=False,
-                error=f"Network error: {str(e)}"
+                error="Invalid Anthropic API key"
+            )
+        except anthropic.RateLimitError:
+            return OCRResult(
+                success=False,
+                error="Rate limit exceeded. Please try again later."
+            )
+        except anthropic.APIError as e:
+            return OCRResult(
+                success=False,
+                error=f"API error: {str(e)}"
             )
         except Exception as e:
+            print(f"[OCR] Unexpected error: {type(e).__name__}: {e}")
             return OCRResult(
                 success=False,
                 error=f"Unexpected error: {str(e)}"

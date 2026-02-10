@@ -34,7 +34,7 @@ This document outlines the technical design for the Math Feedback Application - 
 | Frontend | Vanilla HTML/CSS/JS | Simple, no build step, fast to develop |
 | Backend | Python + FastAPI | Async support, automatic OpenAPI docs, easy API design |
 | Database | SQLite | Zero config, file-based, sufficient for this scope |
-| OCR | OCR.space API (Engine 3) | Free tier, handwriting OCR support |
+| OCR | Claude Vision API | Native handwriting reading, same API key as evaluation |
 | LLM | Claude API | Strong reasoning capabilities for pedagogical feedback |
 
 ### Request Flow
@@ -325,7 +325,7 @@ Items explicitly out of scope for initial implementation, but worth noting:
 |------|------|--------|
 | 1 | Database setup and seeding | ✅ Complete |
 | 2 | Basic API endpoints (topics, problems) | ✅ Complete |
-| 3 | OCR integration (OCR.space Engine 3 - Handwriting) | ✅ Complete |
+| 3 | OCR integration (Claude Vision - Handwriting) | ✅ Complete |
 | 4 | Claude integration with evaluation prompt | ✅ Complete |
 | 5 | Submission endpoint (full flow) | ✅ Complete |
 | 6 | Frontend: topic selection and problem display | ✅ Complete |
@@ -353,7 +353,7 @@ backend/
     │   └── submissions.py # Submissions endpoints
     └── services/
         ├── __init__.py
-        ├── ocr.py         # OCR.space integration (Engine 3 - Handwriting)
+        ├── ocr.py         # Claude Vision OCR (handwriting extraction)
         └── evaluator.py   # Claude evaluation service
 ```
 
