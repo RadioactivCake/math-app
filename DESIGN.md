@@ -2,367 +2,48 @@
 
 ## Overview
 
-This document outlines the technical design for the Math Feedback Application - a web app where students upload photos of handwritten math solutions and receive AI-powered feedback on their reasoning process.
-
----
-
-## 1. Architecture
-
-### System Components
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│                 │     │                 │     │                 │
-│    Frontend     │────▶│    Backend      │────▶│    Database     │
-│   (HTML/JS)     │     │   (FastAPI)     │     │    (SQLite)     │
-│                 │     │                 │     │                 │
-└─────────────────┘     └────────┬────────┘     └─────────────────┘
-                                 │
-                    ┌────────────┴────────────┐
-                    │                         │
-                    ▼                         ▼
-           ┌─────────────────┐      ┌─────────────────┐
-           │   Mathpix API   │      │   Claude API    │
-           │   (OCR)         │      │   (Evaluation)  │
-           └─────────────────┘      └─────────────────┘
-```
-
-### Technology Choices
-
-| Component | Choice | Rationale |
-|-----------|--------|-----------|
-| Frontend | Vanilla HTML/CSS/JS | Simple, no build step, fast to develop |
-| Backend | Python + FastAPI | Async support, automatic OpenAPI docs, easy API design |
-| Database | SQLite | Zero config, file-based, sufficient for this scope |
-| OCR | Claude Vision API | Native handwriting reading, same API key as evaluation |
-| LLM | Claude API | Strong reasoning capabilities for pedagogical feedback |
-
-### Request Flow
-
-1. User selects topic → Frontend fetches problems from backend
-2. User uploads image → Backend receives base64-encoded image
-3. Backend sends image to Mathpix → Receives extracted LaTeX/text
-4. Backend constructs prompt with problem + extracted work + correct answer
-5. Backend sends to Claude → Receives structured feedback
-6. Backend stores submission and returns feedback to frontend
-7. Frontend displays feedback to user
-
----
-
-## 2. Data Model
-
-### Entity Relationship
-
-```
-┌─────────────┐       ┌─────────────┐       ┌─────────────┐
-│   Topic     │──1:N──│   Problem   │──1:N──│ Submission  │
-└─────────────┘       └─────────────┘       └─────────────┘
-```
-
-### Tables
-
-#### topics
-| Column | Type | Description |
-|--------|------|-------------|
-| id | TEXT (PK) | Unique identifier (e.g., "fractions-addition") |
-| name | TEXT | Display name |
-| description | TEXT | Topic description |
-| grade_level | INTEGER | Target grade level |
-
-#### problems
-| Column | Type | Description |
-|--------|------|-------------|
-| id | TEXT (PK) | Unique identifier (e.g., "frac-add-001") |
-| topic_id | TEXT (FK) | Reference to topic |
-| question | TEXT | The math problem text |
-| correct_answer | TEXT | Expected correct answer |
-
-#### submissions
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER (PK) | Auto-increment ID |
-| problem_id | TEXT (FK) | Reference to problem |
-| image_data | TEXT | Base64-encoded image (or file path) |
-| extracted_text | TEXT | OCR result from Mathpix |
-| extracted_latex | TEXT | LaTeX representation from Mathpix |
-| is_correct | BOOLEAN | Whether final answer was correct |
-| feedback | TEXT | LLM-generated feedback |
-| created_at | TIMESTAMP | Submission time |
-
----
-
-## 3. API Design
-
-### Endpoints
-
-#### GET /api/topics
-Returns list of available math topics.
-
-**Response:**
-```json
-{
-  "topics": [
-    {
-      "id": "fractions-addition",
-      "name": "Adding Fractions",
-      "description": "Adding fractions with like and unlike denominators",
-      "grade_level": 5,
-      "problem_count": 3
-    }
-  ]
-}
-```
-
-#### GET /api/topics/{topic_id}/problems
-Returns problems for a specific topic.
-
-**Response:**
-```json
-{
-  "topic": {
-    "id": "fractions-addition",
-    "name": "Adding Fractions"
-  },
-  "problems": [
-    {
-      "id": "frac-add-001",
-      "question": "What is 1/4 + 1/2?"
-    }
-  ]
-}
-```
-
-#### GET /api/problems/{problem_id}
-Returns a specific problem (without the answer).
-
-**Response:**
-```json
-{
-  "id": "frac-add-001",
-  "topic_id": "fractions-addition",
-  "question": "What is 1/4 + 1/2?"
-}
-```
-
-#### POST /api/submissions
-Submit a solution image for evaluation.
-
-**Request:**
-```json
-{
-  "problem_id": "frac-add-001",
-  "image_data": "base64-encoded-image-string"
-}
-```
-
-**Response:**
-```json
-{
-  "id": 1,
-  "is_correct": true,
-  "extracted_work": "1/4 + 1/2 = 1/4 + 2/4 = 3/4",
-  "feedback": {
-    "summary": "Correct! Great work.",
-    "steps_analysis": [
-      {
-        "step": "Found common denominator of 4",
-        "evaluation": "correct",
-        "comment": "Good recognition that 4 is the LCD"
-      },
-      {
-        "step": "Converted 1/2 to 2/4",
-        "evaluation": "correct",
-        "comment": "Correct conversion"
-      },
-      {
-        "step": "Added numerators: 1 + 2 = 3",
-        "evaluation": "correct",
-        "comment": "Correct addition"
-      }
-    ],
-    "suggestions": []
-  }
-}
-```
-
-#### GET /api/submissions
-Returns submission history.
-
-**Query params:** `?limit=10&offset=0`
-
-**Response:**
-```json
-{
-  "submissions": [
-    {
-      "id": 1,
-      "problem_id": "frac-add-001",
-      "question": "What is 1/4 + 1/2?",
-      "is_correct": true,
-      "feedback_summary": "Correct! Great work.",
-      "created_at": "2024-01-15T10:30:00Z"
-    }
-  ],
-  "total": 5
-}
-```
-
-#### GET /api/submissions/{submission_id}
-Returns full details of a specific submission.
-
----
-
-## 4. LLM Strategy
-
-### Prompt Design
-
-The evaluation prompt will be structured to elicit pedagogically useful feedback:
-
-```
-You are a supportive math tutor evaluating a student's work.
-
-PROBLEM: {question}
-CORRECT ANSWER: {correct_answer}
-STUDENT'S WORK (extracted from handwriting):
-{extracted_text}
-
-Analyze the student's solution and provide feedback. Focus on:
-1. Whether their final answer is correct
-2. The reasoning shown in their work
-3. Any errors in their process (even if the answer is correct)
-4. What they did well
-
-Respond in JSON format:
-{
-  "is_correct": boolean,
-  "summary": "Brief 1-2 sentence summary",
-  "steps_analysis": [
-    {
-      "step": "What the student did",
-      "evaluation": "correct|incorrect|unclear",
-      "comment": "Specific feedback on this step"
-    }
-  ],
-  "suggestions": ["Things to improve or remember"],
-  "encouragement": "Positive closing note"
-}
-
-Be encouraging but honest. If work is minimal, note that showing steps helps catch errors.
-```
-
-### Pedagogical Principles
-
-1. **Process over answer**: Emphasize reasoning, not just correctness
-2. **Specific feedback**: Point to exact steps, not vague comments
-3. **Growth mindset**: Frame errors as learning opportunities
-4. **Scaffolding**: Suggest next steps without giving away answers
-5. **Encouragement**: Always acknowledge effort and correct elements
-
-### Handling Edge Cases
-
-| Scenario | LLM Instruction |
-|----------|-----------------|
-| Correct answer, no work shown | Acknowledge correctness, encourage showing steps |
-| Wrong answer, correct process | Highlight good reasoning, point to calculation error |
-| Unreadable/unclear work | Ask for clarification, provide general guidance |
-| Unconventional but valid method | Validate the approach, compare to standard method |
-
----
-
-## 5. Error Handling
-
-### OCR Failures (Mathpix)
-
-| Error Type | Detection | User Message | Backend Action |
-|------------|-----------|--------------|----------------|
-| Low confidence | Mathpix confidence < 0.5 | "We had trouble reading your work. Try a clearer photo." | Log, still attempt evaluation |
-| Empty result | No text extracted | "No mathematical content detected. Please upload a photo of your work." | Return early, don't call LLM |
-| API error | HTTP 4xx/5xx | "Image processing temporarily unavailable. Please try again." | Log error, return 503 |
-| Invalid image | Format not supported | "Please upload a JPEG or PNG image." | Return 400 |
-
-### LLM Failures (Claude)
-
-| Error Type | Detection | User Message | Backend Action |
-|------------|-----------|--------------|----------------|
-| Rate limit | HTTP 429 | "High demand. Please try again in a moment." | Implement retry with backoff |
-| Invalid response | JSON parse fails | "Unable to generate feedback. Please try again." | Log, return generic feedback |
-| API error | HTTP 5xx | "Feedback service temporarily unavailable." | Log, return 503 |
-
-### Input Validation
-
-- Maximum image size: 10MB
-- Allowed formats: JPEG, PNG
-- Problem ID must exist in database
-- Rate limiting: 10 submissions per minute per session
-
-### Graceful Degradation
-
-If Mathpix fails but we have partial text:
-1. Attempt evaluation with available text
-2. Include disclaimer in feedback: "Note: Some of your work may not have been captured clearly."
-
-If LLM fails:
-1. Still store submission with OCR result
-2. Return: "We couldn't generate detailed feedback, but your work has been saved. The correct answer is {answer}."
-
----
-
-## 6. Future Considerations
-
-Items explicitly out of scope for initial implementation, but worth noting:
-
-- **User authentication**: Currently session-based only
-- **Multiple attempts per problem**: Could track improvement over time
-- **Hint system**: Progressive hints before showing answer
-- **Teacher dashboard**: View class-wide analytics
-- **Mobile optimization**: Camera integration for direct capture
-
----
-
-## 7. Implementation Status
-
-| Step | Task | Status |
-|------|------|--------|
-| 1 | Database setup and seeding | ✅ Complete |
-| 2 | Basic API endpoints (topics, problems) | ✅ Complete |
-| 3 | OCR integration (Claude Vision - Handwriting) | ✅ Complete |
-| 4 | Claude integration with evaluation prompt | ✅ Complete |
-| 5 | Submission endpoint (full flow) | ✅ Complete |
-| 6 | Frontend: topic selection and problem display | ✅ Complete |
-| 7 | Frontend: image upload with preview | ✅ Complete |
-| 8 | Frontend: feedback display | ✅ Complete |
-| 9 | Frontend: submission history | ✅ Complete |
-| 10 | Error handling and edge cases | ✅ Complete |
-| 11 | Testing with provided images | ⏳ Pending |
-
-### Backend Files
-
-```
-backend/
-├── .env.example           # Environment variables template
-├── requirements.txt       # Python dependencies
-└── app/
-    ├── __init__.py
-    ├── main.py            # FastAPI application entry point
-    ├── database.py        # SQLite setup and operations
-    ├── models.py          # Pydantic models for API
-    ├── routers/
-    │   ├── __init__.py
-    │   ├── topics.py      # Topics endpoints
-    │   ├── problems.py    # Problems endpoints
-    │   └── submissions.py # Submissions endpoints
-    └── services/
-        ├── __init__.py
-        ├── ocr.py         # Claude Vision OCR (handwriting extraction)
-        └── evaluator.py   # Claude evaluation service
-```
-
-### Frontend Files
-
-```
-frontend/
-├── index.html             # Main HTML page (single-page app)
-└── src/
-    ├── app.js             # Application logic (API calls, UI management)
-    └── styles.css         # Responsive styling
-```
+A web app where students photograph handwritten math solutions and receive AI feedback on their reasoning process. The goal is pedagogical — feedback should help students understand *where* their thinking went right or wrong, not just tell them the answer.
+
+## Architecture
+
+The system is intentionally simple: a FastAPI backend serves a vanilla HTML/JS frontend, with SQLite for storage. There are no build tools, no ORM, no authentication layer. This keeps the focus on the core feedback loop.
+
+The interesting part is the AI pipeline. When a student submits a photo, the backend makes two Claude API calls in sequence:
+
+1. **Vision call** — sends the image to Claude Vision, which both checks image quality and extracts the handwritten math. If the image is unreadable (blurry, dark, messy layout), it stops here and asks the student to retake the photo. This prevents garbage-in-garbage-out from reaching the evaluator.
+
+2. **Evaluation call** — sends the extracted text (along with the problem and correct answer) to Claude for analysis. The prompt is designed to produce structured feedback: step-by-step analysis, identification of errors, suggestions, and encouragement.
+
+Originally the spec called for Mathpix OCR, but during development we found that Claude Vision handles handwriting well enough on its own, and using a single API key for everything simplifies deployment. We also tried OCR.space (free tier was unreliable for handwriting, 1MB limit).
+
+## Data Model
+
+Three tables: `topics` → `problems` → `submissions`. Topics group problems by subject (fractions, linear equations, percentages). Each problem has a question and correct answer. Submissions store the image (truncated base64), extracted text, correctness, and the full feedback JSON.
+
+Feedback is stored as a JSON string rather than normalized tables because the structure varies per evaluation and we only ever read it back as a whole — no need to query individual steps.
+
+## API Design
+
+The API follows a straightforward REST pattern. `GET /api/topics` and `/api/topics/{id}/problems` handle browsing. `POST /api/submissions` runs the full pipeline. `GET /api/submissions` provides history with pagination. A `/health` endpoint reports whether the AI services are configured.
+
+The submission endpoint returns a `quality_failed` flag when the image is rejected, which the frontend uses to show an amber warning card with retake suggestions instead of the normal feedback display.
+
+## LLM Strategy
+
+The evaluation prompt frames Claude as a "supportive math tutor" and asks for JSON output with specific fields: summary, step-by-step analysis (each step marked correct/incorrect/unclear with a comment), improvement suggestions, and encouragement. This structure gives the frontend enough to render color-coded feedback.
+
+The prompt emphasizes process over correctness — a student who gets the wrong answer but shows good reasoning should get different feedback than one who writes only the answer. Edge cases like minimal work, unconventional methods, and calculation errors in otherwise sound reasoning all get specific handling instructions in the prompt.
+
+## Error Handling
+
+The system degrades gracefully at each stage. If the Vision call detects a bad image, the student gets a friendly suggestion to retake the photo — no evaluation is attempted. If OCR succeeds but evaluation fails, the extracted text is still saved and the student sees their work plus the correct answer. API errors (auth, rate limit, server errors) all return appropriate messages rather than stack traces.
+
+The image quality check is deliberately strict ("when in doubt, reject") because feeding a bad extraction to the evaluator produces confusing feedback. It's better to ask for a retake than to give feedback on misread text.
+
+## Scope Decisions
+
+- No authentication — single-user for simplicity
+- SQLite over PostgreSQL — zero config, sufficient for this scale
+- Base64 images in the database — simple but wouldn't scale; production would use file storage
+- No rate limiting or input size validation — noted as future work
+- Crossed-out content detection was explored but Sonnet's visual reasoning isn't reliable enough for it yet — documented in conversation logs as a known limitation
