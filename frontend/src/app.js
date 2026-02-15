@@ -265,6 +265,41 @@ function displayFeedback(data) {
   const section = document.getElementById("feedback-section");
   const feedback = data.feedback;
 
+  // Handle quality check failure
+  if (data.quality_failed) {
+    let html = `
+      <div class="quality-warning">
+        <div class="quality-warning-icon">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <h3>Image Quality Issue</h3>
+        <p class="quality-summary">${escapeHtml(feedback.summary)}</p>
+    `;
+
+    if (feedback.suggestions && feedback.suggestions.length > 0) {
+      html += `<ul class="quality-tips">`;
+      feedback.suggestions.forEach((s) => {
+        html += `<li>${escapeHtml(s)}</li>`;
+      });
+      html += `</ul>`;
+    }
+
+    if (feedback.encouragement) {
+      html += `<p class="quality-encouragement">${escapeHtml(feedback.encouragement)}</p>`;
+    }
+
+    html += `<button class="try-again-btn" onclick="resetUpload()">Retake Photo</button>`;
+    html += `</div>`;
+
+    section.innerHTML = html;
+    section.classList.remove("hidden");
+    return;
+  }
+
   let html = `
     <div class="feedback-header">
       <span class="result-badge ${data.is_correct ? "correct" : "incorrect"}">

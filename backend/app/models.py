@@ -60,6 +60,7 @@ class SubmissionResponse(BaseModel):
     is_correct: bool
     extracted_work: Optional[str] = None
     feedback: Feedback
+    quality_failed: bool = False
 
 
 class SubmissionHistoryItem(BaseModel):

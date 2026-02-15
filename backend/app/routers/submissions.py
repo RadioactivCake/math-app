@@ -11,9 +11,9 @@ from ..models import (
     SubmissionDetail,
     Feedback,
     StepAnalysis,
-    ErrorResponse
+    ErrorResponse,
 )
-from ..services.ocr import ocr_service
+from ..services.ocr import vision_service
 from ..services.evaluator import evaluator_service
 
 router = APIRouter(prefix="/api/submissions", tags=["submissions"])
@@ -25,8 +25,8 @@ async def create_submission(submission: SubmissionCreate):
     Submit a solution image for evaluation.
 
     1. Validates the problem exists
-    2. Extracts math from image using Mathpix OCR
-    3. Evaluates the solution using Claude
+    2. Claude Vision: checks image quality + extracts math (single call)
+    3. Claude: evaluates the extracted solution
     4. Stores and returns the result
     """
     # Get problem with answer
@@ -41,11 +41,11 @@ async def create_submission(submission: SubmissionCreate):
     if not problem:
         raise HTTPException(status_code=404, detail="Problem not found")
 
-    # Extract math from image using Mathpix
-    ocr_result = await ocr_service.extract_math(submission.image_data)
+    # Step 1: Claude Vision — quality check + OCR in one call
+    vision_result = await vision_service.analyze(submission.image_data)
 
-    if not ocr_result.success:
-        # Store failed submission
+    # Handle API/system errors
+    if vision_result.error:
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -53,14 +53,14 @@ async def create_submission(submission: SubmissionCreate):
                 VALUES (?, ?, ?, ?, ?)
             """, (
                 submission.problem_id,
-                submission.image_data[:100] + "...",  # Store truncated for reference
+                submission.image_data[:100] + "...",
                 None,
                 False,
                 json.dumps({
-                    "summary": f"Could not read your work: {ocr_result.error}",
+                    "summary": f"Could not process your image: {vision_result.error}",
                     "steps_analysis": [],
-                    "suggestions": ["Please try uploading a clearer photo of your work"],
-                    "encouragement": "Don't give up! Try taking a photo with better lighting."
+                    "suggestions": ["Please try again in a moment"],
+                    "encouragement": "Don't give up! This is a temporary issue."
                 })
             ))
             submission_id = cursor.lastrowid
@@ -70,29 +70,48 @@ async def create_submission(submission: SubmissionCreate):
             is_correct=False,
             extracted_work=None,
             feedback=Feedback(
-                summary=f"Could not read your work: {ocr_result.error}",
+                summary=f"Could not process your image: {vision_result.error}",
                 steps_analysis=[],
-                suggestions=["Please try uploading a clearer photo of your work"],
-                encouragement="Don't give up! Try taking a photo with better lighting."
-            )
+                suggestions=["Please try again in a moment"],
+                encouragement="Don't give up! This is a temporary issue."
+            ),
         )
 
-    # Evaluate using Claude
+    # Handle quality check failure
+    if not vision_result.readable:
+        issues_text = ", ".join(vision_result.issues) if vision_result.issues else "Image quality too low"
+        return SubmissionResponse(
+            id=0,
+            is_correct=False,
+            extracted_work=None,
+            feedback=Feedback(
+                summary=f"Image quality check failed: {issues_text}",
+                steps_analysis=[],
+                suggestions=[vision_result.suggestion] if vision_result.suggestion else [
+                    "Try taking the photo in better lighting",
+                    "Make sure your work is clearly visible and in focus",
+                    "Write your steps in a clear, top-to-bottom order"
+                ],
+                encouragement="No worries! Just retake the photo and try again."
+            ),
+            quality_failed=True
+        )
+
+    # Step 2: Claude — evaluate the extracted text
     eval_result = await evaluator_service.evaluate(
         question=problem["question"],
         correct_answer=problem["correct_answer"],
-        extracted_text=ocr_result.text or ocr_result.latex
+        extracted_text=vision_result.extracted_text
     )
 
     if not eval_result.success:
-        # OCR worked but evaluation failed - still provide some feedback
         feedback = Feedback(
             summary=f"We extracted your work but couldn't fully evaluate it: {eval_result.error}",
             steps_analysis=[
                 StepAnalysis(
                     step="Your work",
                     evaluation="unclear",
-                    comment=ocr_result.text or "Work extracted but evaluation unavailable"
+                    comment=vision_result.extracted_text or "Work extracted but evaluation unavailable"
                 )
             ],
             suggestions=["Please try again in a moment"],
@@ -102,13 +121,12 @@ async def create_submission(submission: SubmissionCreate):
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO submissions (problem_id, image_data, extracted_text, extracted_latex, is_correct, feedback)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO submissions (problem_id, image_data, extracted_text, is_correct, feedback)
+                VALUES (?, ?, ?, ?, ?)
             """, (
                 submission.problem_id,
                 submission.image_data[:100] + "...",
-                ocr_result.text,
-                ocr_result.latex,
+                vision_result.extracted_text,
                 False,
                 json.dumps(feedback.model_dump())
             ))
@@ -117,21 +135,20 @@ async def create_submission(submission: SubmissionCreate):
         return SubmissionResponse(
             id=submission_id,
             is_correct=False,
-            extracted_work=ocr_result.text,
-            feedback=feedback
+            extracted_work=vision_result.extracted_text,
+            feedback=feedback,
         )
 
-    # Success - store complete result
+    # Success — store complete result
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO submissions (problem_id, image_data, extracted_text, extracted_latex, is_correct, feedback)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO submissions (problem_id, image_data, extracted_text, is_correct, feedback)
+            VALUES (?, ?, ?, ?, ?)
         """, (
             submission.problem_id,
             submission.image_data[:100] + "...",
-            ocr_result.text,
-            ocr_result.latex,
+            vision_result.extracted_text,
             eval_result.is_correct,
             json.dumps(eval_result.feedback.model_dump())
         ))
@@ -140,8 +157,8 @@ async def create_submission(submission: SubmissionCreate):
     return SubmissionResponse(
         id=submission_id,
         is_correct=eval_result.is_correct,
-        extracted_work=ocr_result.text,
-        feedback=eval_result.feedback
+        extracted_work=vision_result.extracted_text,
+        feedback=eval_result.feedback,
     )
 
 

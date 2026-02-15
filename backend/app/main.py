@@ -63,14 +63,14 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    from .services.ocr import ocr_service
+    from .services.ocr import vision_service
     from .services.evaluator import evaluator_service
 
     return {
         "status": "healthy",
         "database": DATABASE_PATH.exists(),
-        "ocr_configured": ocr_service.is_configured(),
-        "anthropic_configured": evaluator_service.is_configured()
+        "vision_configured": vision_service.is_configured(),
+        "evaluator_configured": evaluator_service.is_configured()
     }
 
 
