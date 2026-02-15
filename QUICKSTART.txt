@@ -1,0 +1,43 @@
+========================================
+  QUICK SETUP & RUN GUIDE
+========================================
+
+PREREQUISITES
+- Python 3.13 installed at: C:\Users\poket\AppData\Local\Programs\Python\Python313\python.exe
+- Dependencies (FastAPI, uvicorn, etc.) already installed globally in Python 3.13
+- backend\.env already has API keys configured
+
+
+RUN THE APP (2 commands)
+========================
+
+Open two terminals:
+
+Terminal 1 - Backend (port 8000):
+  cd C:\Users\poket\Desktop\math-feedback-app\backend
+  C:\Users\poket\AppData\Local\Programs\Python\Python313\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+Terminal 2 - Frontend (port 3000):
+  C:\Users\poket\AppData\Local\Programs\Python\Python313\python.exe -m http.server 3000 --directory C:\Users\poket\Desktop\math-feedback-app\frontend
+
+Then open http://localhost:3000 in your browser.
+
+
+URLS
+====
+  Frontend:           http://localhost:3000
+  Backend API:        http://localhost:8000
+  API Docs (Swagger): http://localhost:8000/docs
+  Health Check:       http://localhost:8000/health
+
+
+STOPPING THE SERVERS
+====================
+Press Ctrl+C in each terminal window.
+
+
+TROUBLESHOOTING
+===============
+- "No module named uvicorn": Use the full Python path above, not just "python" or "py".
+- Port already in use: Run "netstat -ano | findstr :8000" to find the PID, then "taskkill /PID <pid> /F".
+- API key issues: Check that backend\.env has valid ANTHROPIC_API_KEY and OCR_SPACE_API_KEY values.
