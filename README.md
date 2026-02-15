@@ -63,10 +63,10 @@ The API will be available at `http://localhost:8000`
 ```bash
 cd frontend
 # Open index.html in browser, or use a local server:
-python -m http.server 3000 --bind 127.0.0.1
+python -m http.server 3000 --bind localhost
 ```
 
-The frontend will be available at `http://127.0.0.1:3000`
+The frontend will be available at `http://localhost:3000`
 
 ### API Endpoints
 
