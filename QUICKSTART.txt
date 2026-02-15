@@ -18,14 +18,14 @@ Terminal 1 - Backend (port 8000):
   C:\Users\poket\AppData\Local\Programs\Python\Python313\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 Terminal 2 - Frontend (port 3000):
-  C:\Users\poket\AppData\Local\Programs\Python\Python313\python.exe -m http.server 3000 --directory C:\Users\poket\Desktop\math-feedback-app\frontend
+  C:\Users\poket\AppData\Local\Programs\Python\Python313\python.exe -m http.server 3000 --bind 127.0.0.1 --directory C:\Users\poket\Desktop\math-feedback-app\frontend
 
-Then open http://localhost:3000 in your browser.
+Then open http://127.0.0.1:3000 in your browser.
 
 
 URLS
 ====
-  Frontend:           http://localhost:3000
+  Frontend:           http://127.0.0.1:3000
   Backend API:        http://localhost:8000
   API Docs (Swagger): http://localhost:8000/docs
   Health Check:       http://localhost:8000/health
